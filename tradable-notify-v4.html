@@ -87,6 +87,20 @@ h1{font-size:26px;font-weight:600;color:var(--text);margin-bottom:0.25rem}
 .note{font-size:12px;color:var(--text3);line-height:1.65;padding:0.75rem 1rem;background:var(--bg3);border-radius:var(--radius);border:0.5px solid var(--border);margin-top:0.75rem}
 .note strong{color:var(--text2)}
 
+/* credential help tabs */
+.help-tabs{display:flex;gap:8px;margin-top:1rem;border-bottom:0.5px solid var(--border)}
+.help-tab{font-size:12px;font-weight:500;color:var(--text2);padding:8px 4px;background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.15s}
+.help-tab:hover{color:var(--text)}
+.help-tab.active{color:var(--info);border-bottom-color:var(--info)}
+.help-panel{display:none;padding-top:0.875rem}
+.help-panel.active{display:block}
+.help-item{display:flex;flex-direction:column;gap:2px;padding:0.6rem 0;border-bottom:0.5px dashed var(--border)}
+.help-item:last-child{border-bottom:none}
+.help-item .h-name{font-size:12px;font-weight:600;color:var(--text)}
+.help-item .h-desc{font-size:12px;color:var(--text2);line-height:1.55}
+.help-reminder{font-size:12px;color:var(--text3);line-height:1.65;padding:0.75rem 1rem;background:var(--bg3);border-radius:var(--radius);border:0.5px solid var(--border);margin-top:0.75rem}
+.help-reminder strong{color:var(--text2)}
+
 @media(max-width:600px){.grid2,.grid3,.cond-grid{grid-template-columns:1fr}.btn-row{flex-direction:column}}
 </style>
 </head>
@@ -148,6 +162,68 @@ h1{font-size:26px;font-weight:600;color:var(--text);margin-bottom:0.25rem}
     5. Go to Account → <strong>Public Key</strong> and copy it<br>
     Paste all three above, enter your email address, then hit <strong>✉ Test Email</strong>.<br><br>
     <strong>Volume note:</strong> TwelveData returns tick volume (number of price changes per candle) for Forex — not true traded volume. It's a reliable proxy for momentum and conviction, used widely across retail platforms.
+  </div>
+
+  <div class="help-tabs">
+    <button class="help-tab active" onclick="showHelpTab('what')" id="tabBtnWhat">What actually are these credentials/details</button>
+    <button class="help-tab" onclick="showHelpTab('where')" id="tabBtnWhere">Where to retrieve these credentials/details</button>
+  </div>
+
+  <div class="help-panel active" id="helpPanelWhat">
+    <div class="help-item">
+      <div class="h-name">TwelveData API key</div>
+      <div class="h-desc">A unique code that authenticates this app with TwelveData's market data service, letting it pull live currency/stock prices.</div>
+    </div>
+    <div class="help-item">
+      <div class="h-name">EmailJS Public key</div>
+      <div class="h-desc">Identifies your EmailJS account so this app is allowed to send emails through it.</div>
+    </div>
+    <div class="help-item">
+      <div class="h-name">EmailJS Service ID</div>
+      <div class="h-desc">Identifies which connected email service (e.g. your Gmail) EmailJS should send through.</div>
+    </div>
+    <div class="help-item">
+      <div class="h-name">EmailJS Template ID</div>
+      <div class="h-desc">Identifies which pre-built email layout/template to use when sending the alert.</div>
+    </div>
+    <div class="help-item">
+      <div class="h-name">Send alerts to (your email)</div>
+      <div class="h-desc">The destination email address where trading alerts land. No lookup needed — just your own inbox.</div>
+    </div>
+    <div class="help-item">
+      <div class="h-name">Currency pair</div>
+      <div class="h-desc">The specific market (e.g. EUR/USD) this app should monitor and alert on. Your choice — no lookup needed.</div>
+    </div>
+  </div>
+
+  <div class="help-panel" id="helpPanelWhere">
+    <div class="help-item">
+      <div class="h-name">TwelveData API key</div>
+      <div class="h-desc">Log in at twelvedata.com → Dashboard → API Keys.</div>
+    </div>
+    <div class="help-item">
+      <div class="h-name">EmailJS Public key</div>
+      <div class="h-desc">Log in at emailjs.com → Account → API Keys.</div>
+    </div>
+    <div class="help-item">
+      <div class="h-name">EmailJS Service ID</div>
+      <div class="h-desc">emailjs.com → Email Services tab — the service you connected (e.g. Gmail) has an ID like service_xxxxxxx.</div>
+    </div>
+    <div class="help-item">
+      <div class="h-name">EmailJS Template ID</div>
+      <div class="h-desc">emailjs.com → Email Templates tab — your template has an ID like template_xxxxxxx.</div>
+    </div>
+    <div class="help-item">
+      <div class="h-name">Send alerts to (your email)</div>
+      <div class="h-desc">Your own inbox — no retrieval needed.</div>
+    </div>
+    <div class="help-item">
+      <div class="h-name">Currency pair</div>
+      <div class="h-desc">Your choice — no retrieval needed.</div>
+    </div>
+    <div class="help-reminder">
+      <strong>Save these for next time:</strong> Email these credentials to yourself with a clear, specific subject line — e.g. <strong>"Tradable App — API Credentials"</strong>. If you ever lose them, search your email account for that subject (or keywords like "TwelveData API key" or "EmailJS") to find them again quickly.
+    </div>
   </div>
 </div>
 
@@ -812,6 +888,14 @@ async function poll(){
     updateStatusBar(null, e.message);
     log('Poll error: '+e.message, 'log-err');
   }
+}
+
+// ─── Credential help tabs ───────────────────────────────────────────────────
+function showHelpTab(which){
+  document.getElementById('tabBtnWhat').classList.toggle('active', which==='what');
+  document.getElementById('tabBtnWhere').classList.toggle('active', which==='where');
+  document.getElementById('helpPanelWhat').classList.toggle('active', which==='what');
+  document.getElementById('helpPanelWhere').classList.toggle('active', which==='where');
 }
 
 // ─── Start / stop ──────────────────────────────────────────────────────────────
