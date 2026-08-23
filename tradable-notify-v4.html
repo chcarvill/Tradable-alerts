@@ -151,6 +151,10 @@ h1{font-size:26px;font-weight:600;color:var(--text);margin-bottom:0.25rem}
       </select>
     </div>
   </div>
+  <div style="font-size:11px;color:var(--text2);margin-bottom:0.75rem">
+    These fields save automatically in this browser, so you shouldn't need to re-enter them next time.
+    <a href="#" onclick="clearSavedConfig();return false;" style="color:var(--info)">Clear saved config</a>
+  </div>
   <div class="note">
     <strong>TwelveData:</strong> free tier gives 800 API calls/day — plenty for polling every 5 minutes.
     Register at <strong>twelvedata.com</strong> and copy your API key above.<br><br>
@@ -162,6 +166,22 @@ h1{font-size:26px;font-weight:600;color:var(--text);margin-bottom:0.25rem}
     5. Go to Account → <strong>Public Key</strong> and copy it<br>
     Paste all three above, enter your email address, then hit <strong>✉ Test Email</strong>.<br><br>
     <strong>Volume note:</strong> TwelveData returns tick volume (number of price changes per candle) for Forex — not true traded volume. It's a reliable proxy for momentum and conviction, used widely across retail platforms.
+  </div>
+
+  <div class="note">
+    <strong>Security best practices</strong><br><br>
+    <strong>Low effort, worth doing now:</strong><br>
+    • Use a dedicated/separate email account or a fresh EmailJS account just for this app rather than your primary — if a key ever leaks, the blast radius is small.<br>
+    • Keep browser extensions minimal, especially on whatever browser/profile you run this app in. A clean profile just for this tool isn't a bad idea.<br>
+    • Rotate your TwelveData and EmailJS keys occasionally (both let you regenerate from their dashboards) — cheap insurance.<br>
+    • Don't run the app on shared/public computers, since your config is saved automatically in that browser.<br><br>
+    <strong>Medium effort, meaningfully better:</strong><br>
+    • Check whether TwelveData and EmailJS let you scope/restrict keys (e.g. domain-restricted API keys, read-only vs send-only permissions). Many services offer this and it's an easy win if available.<br>
+    • If you ever host this file online (rather than just opening it locally), serve it over HTTPS only — locally saved config on an HTTP page is far more exposed to network-level snooping.<br><br>
+    <strong>Higher effort, only if this becomes a "real" tool:</strong><br>
+    • Move the API keys server-side: a small backend (even a serverless function) holds the TwelveData/EmailJS keys, and this app calls that instead of calling TwelveData/EmailJS directly from the browser. Then nothing sensitive is saved locally at all.<br>
+    • Add basic encryption-at-rest for the stored config (e.g. encrypt with a passphrase you enter once per session) — meaningful only if you're worried about local device compromise, since anyone with browser dev tools access can still see the decrypted values while the app is open.<br><br>
+    For a personal trading-alerts tool you run yourself, the "low effort" tier is proportionate. "Medium" is a nice-to-have if quick to enable. The "higher effort" backend approach is only worth it if this stops being a personal tool and starts being something others use or you access from multiple untrusted machines.
   </div>
 
   <div class="help-tabs">
@@ -222,7 +242,7 @@ h1{font-size:26px;font-weight:600;color:var(--text);margin-bottom:0.25rem}
       <div class="h-desc">Your choice — no retrieval needed.</div>
     </div>
     <div class="help-reminder">
-      <strong>Save these for next time:</strong> Email these credentials to yourself and set the subject heading to <strong>"Tradable Credentials"</strong> — this makes them easy to find later via a keyword search in your email account. If you ever lose them, just search your inbox for <strong>"Tradable Credentials"</strong> to retrieve them quickly.
+      <strong>Backup tip:</strong> the app now saves these fields automatically in this browser, so you shouldn't need this. But if you're switching devices/browsers, or want an off-browser backup, email these credentials to yourself and set the subject heading to <strong>"Tradable - One Shoe On"</strong> — this makes them easy to find later via a keyword search in your email account.
     </div>
   </div>
 </div>
@@ -416,6 +436,54 @@ function log(msg, cls=''){
   wrap.insertBefore(el, wrap.firstChild);
   if(wrap.children.length > 80) wrap.removeChild(wrap.lastChild);
 }
+
+// ─── Config persistence (localStorage) ────────────────────────────────────────
+const CONFIG_STORAGE_KEY = 'tradableConfig';
+const CONFIG_FIELD_IDS = ['tdKey','ejPublicKey','ejServiceId','ejTemplateId','alertEmail','symbol'];
+
+function saveConfig(){
+  const cfg = {};
+  CONFIG_FIELD_IDS.forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) cfg[id] = el.value;
+  });
+  try{
+    localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(cfg));
+  }catch(e){
+    log('Could not save config locally: '+(e.message||e), 'log-err');
+  }
+}
+
+function loadConfig(){
+  let cfg;
+  try{
+    const raw = localStorage.getItem(CONFIG_STORAGE_KEY);
+    if(!raw) return;
+    cfg = JSON.parse(raw);
+  }catch(e){
+    return;
+  }
+  CONFIG_FIELD_IDS.forEach(id=>{
+    const el = document.getElementById(id);
+    if(el && cfg[id] !== undefined) el.value = cfg[id];
+  });
+  if(cfg.tdKey || cfg.ejPublicKey) log('Loaded saved config from this browser');
+}
+
+function clearSavedConfig(){
+  try{ localStorage.removeItem(CONFIG_STORAGE_KEY); }catch(e){}
+  CONFIG_FIELD_IDS.forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.value = '';
+  });
+  log('Saved config cleared from this browser');
+}
+
+CONFIG_FIELD_IDS.forEach(id=>{
+  const el = document.getElementById(id);
+  if(el) el.addEventListener('input', saveConfig);
+});
+loadConfig();
 
 // ─── EmailJS ──────────────────────────────────────────────────────────────────
 function getEmailConfig(){
