@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
-<title>Tradable — Entry Alerts v4</title>
+<title>Tradable — Entry Alerts v5</title>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
@@ -94,6 +94,25 @@ h1{font-size:26px;font-weight:600;color:var(--text);margin-bottom:0.25rem}
 .help-tab.active{color:var(--info);border-bottom-color:var(--info)}
 .help-panel{display:none;padding-top:0.875rem}
 .help-panel.active{display:block}
+
+/* top-level mode tabs */
+.mode-tabs{display:flex;gap:6px;margin-bottom:1.25rem;background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:5px}
+.mode-tab{flex:1;padding:10px;border-radius:var(--radius);border:none;background:none;color:var(--text2);font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.15s;letter-spacing:0.02em}
+.mode-tab:hover{color:var(--text)}
+.mode-tab.active{background:var(--bg4);color:var(--text)}
+.mode-tab .mt-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--text3);margin-right:6px;vertical-align:middle}
+.mode-tab .mt-dot.on{background:var(--bull);box-shadow:0 0 5px var(--bull)}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+/* daily gate badge */
+.gate-row{display:flex;align-items:center;gap:10px;padding:0.75rem 1rem;background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);margin-bottom:1rem;flex-wrap:wrap}
+.gate-badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;letter-spacing:0.03em;text-transform:uppercase}
+.gate-badge.bull{background:var(--bull-bg);color:var(--bull);border:0.5px solid var(--bull-border)}
+.gate-badge.bear{background:var(--bear-bg);color:var(--bear);border:0.5px solid var(--bear-border)}
+.gate-badge.unk{background:var(--bg4);color:var(--text3);border:0.5px solid var(--border)}
+.gate-text{font-size:12px;color:var(--text2);flex:1}
+.gate-age{font-size:11px;color:var(--text3)}
 .help-item{display:flex;flex-direction:column;gap:2px;padding:0.6rem 0;border-bottom:0.5px dashed var(--border)}
 .help-item:last-child{border-bottom:none}
 .help-item .h-name{font-size:12px;font-weight:600;color:var(--text)}
@@ -112,6 +131,11 @@ h1{font-size:26px;font-weight:600;color:var(--text);margin-bottom:0.25rem}
   <h1>Tradable — Entry Alerts</h1>
   <div class="subtitle">Live Forex signal monitor · based on Chris Carvill's Trading Bible</div>
 </header>
+
+<div class="mode-tabs">
+<button class="mode-tab active" id="modeBtnSwing" onclick="showMode('swing')"><span class="mt-dot" id="modeDotSwing"></span>Swing / Entry Alerts</button>
+<button class="mode-tab" id="modeBtnScalp" onclick="showMode('scalp')"><span class="mt-dot" id="modeDotScalp"></span>Scalping</button>
+</div>
 
 <!-- STEP 1: API KEYS -->
 <div class="section">
@@ -246,6 +270,8 @@ h1{font-size:26px;font-weight:600;color:var(--text);margin-bottom:0.25rem}
     </div>
   </div>
 </div>
+
+<div class="tab-panel active" id="tabSwing">
 
 <!-- STEP 2: SIGNAL CONDITIONS -->
 <div class="section">
@@ -417,6 +443,195 @@ h1{font-size:26px;font-weight:600;color:var(--text);margin-bottom:0.25rem}
   Indicator values (RSI, MACD, Bollinger Bands, MAs) are calculated from OHLC candle data — the same data your charting platform uses.
   The tab must remain open for monitoring to run. For 24/5 coverage, run this in a Node.js script on a small VPS.
 </div>
+
+</div><!-- /tabSwing -->
+
+<div class="tab-panel" id="tabScalp">
+
+<div class="note" style="margin-top:0;margin-bottom:1rem">
+  Scalping monitors the <strong>same pair</strong> set in Step 1 above, on a faster timeframe. Rules mirror the swing conditions but are tuned for speed (faster MAs/RSI/MACD, tighter divergence and S&amp;R lookbacks) — and every scalp signal is <strong>hard-gated against the daily trend</strong>: it will not fire against the higher-timeframe bias, regardless of confluence %.
+</div>
+
+<!-- DAILY TREND GATE -->
+<div class="gate-row" id="scGateRow">
+  <span class="gate-badge unk" id="scGateBadge">—</span>
+  <span class="gate-text" id="scGateText">Daily trend context not yet checked</span>
+  <span class="gate-age" id="scGateAge"></span>
+</div>
+
+<!-- SCALP STEP 2: SIGNAL CONDITIONS -->
+<div class="section">
+  <div class="section-title">Scalp signal conditions</div>
+  <p style="font-size:12px;color:var(--text2);margin-bottom:0.875rem">Same structure as swing conditions, computed on the scalp timeframe with faster-reacting indicator settings. The daily-trend gate above is checked separately and always required.</p>
+
+  <div class="grid2">
+    <div class="field">
+      <label>MA trend bias to watch (EMA9/EMA21)</label>
+      <select id="sc_c_maTrend">
+        <option value="bullish">Bullish (price above both EMAs)</option>
+        <option value="bearish">Bearish (price below both EMAs)</option>
+        <option value="either">Either direction</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>EMA cross required</label>
+      <select id="sc_c_maCross">
+        <option value="aligned">Must align with trend</option>
+        <option value="any">Any — don't check</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>RSI divergence required (period 9)</label>
+      <select id="sc_c_rsiDiv">
+        <option value="matching">Matching trend direction</option>
+        <option value="any">Any divergence</option>
+        <option value="none">Don't check RSI divergence</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>RSI zone required</label>
+      <select id="sc_c_rsiZone">
+        <option value="any">Any — don't check</option>
+        <option value="not_extreme">Not overbought/oversold</option>
+        <option value="bullish_zone">50–70 (bullish zone)</option>
+        <option value="bearish_zone">30–50 (bearish zone)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>MACD signal required (5,13,6)</label>
+      <select id="sc_c_macd">
+        <option value="matching">Matching trend direction</option>
+        <option value="crossover">Crossover only</option>
+        <option value="any">Any — don't check</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Bollinger band signal (period 10)</label>
+      <select id="sc_c_bb">
+        <option value="any">Any — don't check</option>
+        <option value="breakout">Breakout signal matching trend</option>
+        <option value="fade">Fade signal matching trend</option>
+        <option value="not_mid">Not mid-range</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>S&amp;R location required (tight)</label>
+      <select id="sc_c_sr">
+        <option value="at_level">At a key level (support or resistance)</option>
+        <option value="any">Any — don't check</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Volume / price action signal</label>
+      <select id="sc_c_vol">
+        <option value="any">Any — don't check</option>
+        <option value="spike">Spike (breakout confirmation)</option>
+        <option value="low_retrace">Genuine pullback, low volume</option>
+        <option value="compression">Range compressing (coiling, not a pullback)</option>
+        <option value="not_low">Above average (conviction present)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Double touch S&amp;R (re-test, ±10 pips)</label>
+      <select id="sc_c_doubleTouch">
+        <option value="any">Any — don't check</option>
+        <option value="matching">Re-test matching trend (support for bullish, resistance for bearish)</option>
+        <option value="either">Either re-test (top or bottom)</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="threshold-row">
+    <label>Minimum confluence to alert</label>
+    <input type="range" id="sc_threshold" min="40" max="100" step="5" value="70" oninput="document.getElementById('sc_threshVal').textContent=this.value+'%'"/>
+    <span class="threshold-val" id="sc_threshVal">70%</span>
+  </div>
+</div>
+
+<!-- SCALP STEP 3: MONITOR SETTINGS -->
+<div class="section">
+  <div class="section-title">Scalp monitor settings</div>
+  <div class="grid3">
+    <div class="field">
+      <label>Scalp timeframe</label>
+      <select id="sc_timeframe">
+        <option value="1min" selected>1 minute</option>
+        <option value="5min">5 minute</option>
+        <option value="15min">15 minute</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Poll interval</label>
+      <select id="sc_pollInterval">
+        <option value="30">Every 30 seconds</option>
+        <option value="60" selected>Every 1 minute</option>
+        <option value="120">Every 2 minutes</option>
+        <option value="180">Every 3 minutes</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Alert cooldown</label>
+      <select id="sc_cooldown">
+        <option value="0">No cooldown</option>
+        <option value="300">5 minutes between alerts</option>
+        <option value="600" selected>10 minutes between alerts</option>
+        <option value="900">15 minutes between alerts</option>
+        <option value="1800">30 minutes between alerts</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<!-- SCALP STATUS -->
+<div class="status-bar" id="scStatusBar">
+  <div class="status-dot" id="scStatusDot"></div>
+  <span class="status-text" id="scStatusText">Not running — configure and press Start</span>
+  <span class="status-price" id="scStatusPrice"></span>
+  <span class="status-change" id="scStatusChange"></span>
+</div>
+
+<div class="btn-row">
+  <button class="btn btn-start" id="scBtnStart" onclick="startScalpMonitor()">▶ Start scalp monitor</button>
+  <button class="btn btn-stop" id="scBtnStop" onclick="stopScalpMonitor()" disabled>■ Stop</button>
+  <button class="btn btn-test" onclick="sendTestAlert()">✉ Test Email</button>
+</div>
+
+<!-- SCALP LIVE CONDITIONS -->
+<div class="section" style="margin-top:1rem" id="scCondSection">
+  <div class="section-title">Live condition status</div>
+  <div class="cond-grid" id="scCondGrid">
+    <div class="cond-item"><div class="cond-icon ci-na">–</div>EMA trend</div>
+    <div class="cond-item"><div class="cond-icon ci-na">–</div>EMA cross</div>
+    <div class="cond-item"><div class="cond-icon ci-na">–</div>RSI divergence</div>
+    <div class="cond-item"><div class="cond-icon ci-na">–</div>RSI zone</div>
+    <div class="cond-item"><div class="cond-icon ci-na">–</div>MACD signal</div>
+    <div class="cond-item"><div class="cond-icon ci-na">–</div>Bollinger band</div>
+    <div class="cond-item"><div class="cond-icon ci-na">–</div>S&amp;R location</div>
+    <div class="cond-item"><div class="cond-icon ci-na">–</div>Volume / price action</div>
+    <div class="cond-item"><div class="cond-icon ci-na">–</div>Double touch S&amp;R</div>
+  </div>
+  <div style="margin-top:0.75rem;display:flex;align-items:center;gap:10px">
+    <span style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em">Confluence</span>
+    <div style="flex:1;background:var(--bg3);border-radius:4px;height:6px;overflow:hidden">
+      <div id="scLiveBar" style="height:6px;border-radius:4px;width:0%;background:var(--info);transition:width 0.4s"></div>
+    </div>
+    <span id="scLivePct" style="font-size:13px;font-weight:600;color:var(--info);min-width:36px;text-align:right">—</span>
+  </div>
+</div>
+
+<!-- SCALP LOG -->
+<div class="section">
+  <div class="section-title">Activity log</div>
+  <div class="log-wrap" id="scLogWrap">
+    <div class="log-entry"><span class="log-time">—</span><span>Monitor not yet started</span></div>
+  </div>
+</div>
+
+<div class="note" style="margin-bottom:2rem">
+  <strong>Rate limits:</strong> polling every 1 minute uses roughly 1,440 TwelveData calls/day on its own, plus an occasional daily-candle fetch for the trend gate (refreshed at most every 20 minutes). Running swing and scalp simultaneously adds both totals together — worth keeping an eye on if you're on TwelveData's free tier.
+</div>
+
+</div><!-- /tabScalp -->
 
 </div><!-- /container -->
 
@@ -977,6 +1192,7 @@ async function startMonitor(){
   document.getElementById('btnStop').disabled=false;
   document.getElementById('statusDot').className='status-dot active';
   document.getElementById('statusText').textContent='Starting...';
+  document.getElementById('modeDotSwing').classList.add('on');
   log('Monitor started · fetching initial data...');
   await requestNotificationPermission();
 
@@ -994,7 +1210,443 @@ function stopMonitor(){
   document.getElementById('statusText').textContent='Stopped';
   document.getElementById('statusPrice').textContent='';
   document.getElementById('statusChange').textContent='';
+  document.getElementById('modeDotSwing').classList.remove('on');
   log('Monitor stopped');
+}
+
+// ─── Mode tabs ────────────────────────────────────────────────────────────────
+function showMode(which){
+  document.getElementById('tabSwing').classList.toggle('active', which==='swing');
+  document.getElementById('tabScalp').classList.toggle('active', which==='scalp');
+  document.getElementById('modeBtnSwing').classList.toggle('active', which==='swing');
+  document.getElementById('modeBtnScalp').classList.toggle('active', which==='scalp');
+}
+
+// ─── Scalp logging ────────────────────────────────────────────────────────────
+function scLog(msg, cls=''){
+  const wrap = document.getElementById('scLogWrap');
+  const now = new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const el = document.createElement('div');
+  el.className = 'log-entry' + (cls ? ' '+cls : '');
+  el.innerHTML = `<span class="log-time">${now}</span><span>${msg}</span>`;
+  wrap.insertBefore(el, wrap.firstChild);
+  if(wrap.children.length > 80) wrap.removeChild(wrap.lastChild);
+}
+
+// ─── Daily trend confirmation layer (cached) ──────────────────────────────────
+let dailyBiasCache = null; // {direction, timestamp, symbol, price}
+const DAILY_BIAS_MAX_AGE = 20*60*1000; // refresh at most every 20 min
+
+async function getDailyBias(symbol){
+  const fresh = dailyBiasCache && dailyBiasCache.symbol===symbol && (Date.now()-dailyBiasCache.timestamp < DAILY_BIAS_MAX_AGE);
+  if(fresh) return dailyBiasCache;
+  const candles = await fetchCandles(symbol, '1day', 250);
+  const closes = candles.map(c=>c.close);
+  const n = closes.length;
+  const price = closes[n-1];
+  const ma50 = sma(closes,50)[n-1];
+  const ma200 = sma(closes,200)[n-1];
+  const trendBull = price > ma50 && price > ma200;
+  const trendBear = price < ma50 && price < ma200;
+  const direction = trendBull ? 'bullish' : trendBear ? 'bearish' : 'unclear';
+  dailyBiasCache = {direction, timestamp: Date.now(), symbol, price};
+  return dailyBiasCache;
+}
+
+function updateGateRow(){
+  const badge = document.getElementById('scGateBadge');
+  const text = document.getElementById('scGateText');
+  const age = document.getElementById('scGateAge');
+  if(!dailyBiasCache){
+    badge.className='gate-badge unk'; badge.textContent='—';
+    text.textContent='Daily trend context not yet checked';
+    age.textContent='';
+    return;
+  }
+  const mins = Math.round((Date.now()-dailyBiasCache.timestamp)/60000);
+  if(dailyBiasCache.direction==='bullish'){
+    badge.className='gate-badge bull'; badge.textContent='Bullish';
+    text.textContent='Daily trend is bullish — scalp alerts gated to bullish setups only';
+  } else if(dailyBiasCache.direction==='bearish'){
+    badge.className='gate-badge bear'; badge.textContent='Bearish';
+    text.textContent='Daily trend is bearish — scalp alerts gated to bearish setups only';
+  } else {
+    badge.className='gate-badge unk'; badge.textContent='Unclear';
+    text.textContent='Daily trend is unclear (price between MAs) — scalp alerts suppressed until it resolves';
+  }
+  age.textContent = `checked ${mins}m ago`;
+}
+
+// ─── Price-action helpers: retracement vs compression, double-touch S&R ───────
+function pipSizeForSymbol(symbol){
+  return symbol.toUpperCase().includes('JPY') ? 0.01 : 0.0001;
+}
+
+// Classifies recent price action as a genuine pullback, range compression
+// (stagnation), or neither — using net displacement over a window rather
+// than just the last candle, plus Bollinger-width contraction for compression.
+function computeRetraceState(closes, bbUpperArr, bbLowerArr, direction, window=6){
+  const n = closes.length;
+  if(n < window+1 || direction==='unclear') return 'none';
+  const netMove = closes[n-1] - closes[n-1-window];
+  const netMovePct = (netMove / closes[n-1-window]) * 100;
+
+  const widths = [];
+  for(let i=n-window;i<n;i++){
+    if(bbUpperArr[i]!=null && bbLowerArr[i]!=null) widths.push(bbUpperArr[i]-bbLowerArr[i]);
+  }
+  let compressing = false;
+  if(widths.length>=4){
+    const mid = Math.floor(widths.length/2);
+    const avgFirst = widths.slice(0,mid).reduce((a,b)=>a+b,0)/mid;
+    const avgSecond = widths.slice(mid).reduce((a,b)=>a+b,0)/(widths.length-mid);
+    compressing = avgSecond < avgFirst * 0.85; // range contracted 15%+
+  }
+
+  const STAG_THRESH = 0.02;     // % — near-zero net move over the window
+  const PULLBACK_THRESH = 0.05; // % — meaningful move against trend
+  const againstTrend = (direction==='bullish' && netMovePct<0) || (direction==='bearish' && netMovePct>0);
+
+  if(Math.abs(netMovePct) < STAG_THRESH && compressing) return 'compression';
+  if(againstTrend && Math.abs(netMovePct) >= PULLBACK_THRESH) return 'pullback';
+  return 'none';
+}
+
+// Finds local swing highs/lows (fractal method) in a candle window.
+function findSwingPoints(candles, lookback=3){
+  const points = [];
+  for(let i=lookback;i<candles.length-lookback;i++){
+    const windowSlice = candles.slice(i-lookback, i+lookback+1);
+    const highs = windowSlice.map(c=>c.high);
+    const lows = windowSlice.map(c=>c.low);
+    if(candles[i].high === Math.max(...highs)) points.push({index:i, price:candles[i].high, type:'high'});
+    if(candles[i].low === Math.min(...lows)) points.push({index:i, price:candles[i].low, type:'low'});
+  }
+  return points;
+}
+
+// Detects price re-approaching a prior swing high/low for a second time,
+// within ±10 pips, without having decisively breached it. Fires the moment
+// price comes back into range — doesn't wait for the bounce to confirm.
+function detectDoubleTouch(candles, symbol, lookback=3, scanWindow=60){
+  const pip = pipSizeForSymbol(symbol);
+  const tolerance = pip * 10;
+  const recent = candles.slice(-scanWindow);
+  const points = findSwingPoints(recent, lookback);
+  const highs = points.filter(p=>p.type==='high');
+  const lows = points.filter(p=>p.type==='low');
+  const price = recent[recent.length-1].close;
+
+  let doubleTop=false, doubleBottom=false, topLevel=null, bottomLevel=null;
+
+  if(highs.length){
+    const priorHigh = highs[highs.length-1];
+    if((recent.length-1-priorHigh.index) >= lookback+2){ // ensure real separation since the touch
+      if(Math.abs(price-priorHigh.price) <= tolerance && price <= priorHigh.price+tolerance){
+        doubleTop = true; topLevel = priorHigh.price;
+      }
+    }
+  }
+  if(lows.length){
+    const priorLow = lows[lows.length-1];
+    if((recent.length-1-priorLow.index) >= lookback+2){
+      if(Math.abs(price-priorLow.price) <= tolerance && price >= priorLow.price-tolerance){
+        doubleBottom = true; bottomLevel = priorLow.price;
+      }
+    }
+  }
+  return {doubleTop, doubleBottom, topLevel, bottomLevel, tolerance};
+}
+
+// ─── Scalp analysis (tuned periods, gated by daily bias) ──────────────────────
+async function runScalpAnalysis(){
+  const symbol = document.getElementById('symbol').value;
+  const tf = document.getElementById('sc_timeframe').value;
+  const key = document.getElementById('tdKey').value.trim();
+  if(!key) throw new Error('TwelveData API key required');
+
+  const bias = await getDailyBias(symbol);
+  updateGateRow();
+
+  const candles = await fetchCandles(symbol, tf, 250);
+  const closes = candles.map(c=>c.close);
+  const volumes = candles.map(c=>c.volume);
+  const n = closes.length;
+  const price = closes[n-1];
+  const prevPrice = closes[n-2];
+  const change = ((price-prevPrice)/prevPrice)*100;
+
+  const emaFastArr = ema(closes,9);
+  const emaSlowArr = ema(closes,21);
+  const emaFast = emaFastArr[n-1];
+  const emaSlow = emaSlowArr[n-1];
+
+  const rsiArr = calcRSI(closes,9);
+  const rsiVal = rsiArr[n-1];
+
+  const {macdLine, signalLine, histogram} = calcMACD(closes,5,13,6);
+  const hist = histogram[n-1];
+  const histPrev = histogram[n-2];
+  const macdL = macdLine[n-1];
+  const sigL = signalLine[n-1];
+
+  const {mid:bbMid, upper:bbUpper, lower:bbLower} = calcBB(closes,10,2);
+  const bbU = bbUpper[n-1]; const bbL = bbLower[n-1]; const bbM = bbMid[n-1];
+  const bbWidth = bbU-bbL;
+
+  const div = detectDivergence(closes, rsiArr, 4);
+
+  const volCurrent = volumes[n-1];
+  const volAvg10 = volumes.slice(-11,-1).reduce((a,b)=>a+b,0)/10;
+  const volSpike = volCurrent > volAvg10 * 1.5;
+  const volAboveAvg = volCurrent > volAvg10;
+  const volLow = volCurrent < volAvg10 * 0.7;
+
+  const trendBull = price > emaFast && price > emaSlow;
+  const trendBear = price < emaFast && price < emaSlow;
+  const direction = trendBull ? 'bullish' : trendBear ? 'bearish' : 'unclear';
+
+  const retraceState = computeRetraceState(closes, bbUpper, bbLower, direction);
+  const lowVolRetrace = retraceState==='pullback' && volLow;
+  const compressionActive = retraceState==='compression';
+
+  const crossMatch = (trendBull && emaFast>emaSlow) || (trendBear && emaFast<emaSlow);
+
+  let rsiZone = 'mid';
+  if(rsiVal>70) rsiZone='overbought';
+  else if(rsiVal>50) rsiZone='bullish_zone';
+  else if(rsiVal<30) rsiZone='oversold';
+  else if(rsiVal<50) rsiZone='bearish_zone';
+
+  const macdCrossingUp = histPrev!==null && hist!==null && histPrev<0 && hist>=0;
+  const macdCrossingDown = histPrev!==null && hist!==null && histPrev>0 && hist<=0;
+  const macdBull = hist>0 || macdCrossingUp || (macdL>sigL);
+  const macdBear = hist<0 || macdCrossingDown || (macdL<sigL);
+  const macdMatch = (direction==='bullish'&&macdBull)||(direction==='bearish'&&macdBear);
+
+  const bbBreakBull = price > bbU;
+  const bbBreakBear = price < bbL;
+  const bbFadeBull = prevPrice < bbLower[n-2] && price > bbL;
+  const bbFadeBear = prevPrice > bbUpper[n-2] && price < bbU;
+  const bbMidRange = price > bbL && price < bbU && Math.abs(price-bbM)/(bbWidth/2) < 0.3;
+
+  const swingLow = Math.min(...closes.slice(-30));
+  const swingHigh = Math.max(...closes.slice(-30));
+  const atSupport = Math.abs(price-swingLow)/swingLow < 0.0015;
+  const atResistance = Math.abs(price-swingHigh)/swingHigh < 0.0015;
+  const atLevel = atSupport || atResistance;
+
+  const { doubleTop, doubleBottom, topLevel, bottomLevel } = detectDoubleTouch(candles, symbol);
+
+  const cfg = {
+    maTrend: document.getElementById('sc_c_maTrend').value,
+    maCross: document.getElementById('sc_c_maCross').value,
+    rsiDiv: document.getElementById('sc_c_rsiDiv').value,
+    rsiZone: document.getElementById('sc_c_rsiZone').value,
+    macd: document.getElementById('sc_c_macd').value,
+    bb: document.getElementById('sc_c_bb').value,
+    sr: document.getElementById('sc_c_sr').value,
+    vol: document.getElementById('sc_c_vol').value,
+    doubleTouch: document.getElementById('sc_c_doubleTouch').value,
+  };
+
+  let score=0, total=0;
+  const results=[];
+  function check(label, pass, skip=false){
+    if(skip){ results.push({label,status:'na'}); return; }
+    total++;
+    if(pass){ score++; results.push({label,status:'pass'}); }
+    else results.push({label,status:'fail'});
+  }
+
+  let maTrendPass;
+  if(cfg.maTrend==='bullish') maTrendPass=trendBull;
+  else if(cfg.maTrend==='bearish') maTrendPass=trendBear;
+  else maTrendPass=(trendBull||trendBear);
+  check('EMA trend', maTrendPass);
+
+  check('EMA cross', crossMatch, cfg.maCross==='any');
+
+  let divPass;
+  if(cfg.rsiDiv==='matching') divPass=(direction==='bullish'&&div==='bullish')||(direction==='bearish'&&div==='bearish');
+  else if(cfg.rsiDiv==='any') divPass=(div!=='none');
+  else divPass=true;
+  check('RSI divergence', divPass, cfg.rsiDiv==='none');
+
+  if(cfg.rsiZone==='any'){ check('RSI zone', true, true); }
+  else if(cfg.rsiZone==='not_extreme'){ check('RSI zone', rsiZone!=='overbought'&&rsiZone!=='oversold'); }
+  else if(cfg.rsiZone==='bullish_zone'){ check('RSI zone', rsiZone==='bullish_zone'); }
+  else { check('RSI zone', rsiZone==='bearish_zone'); }
+
+  if(cfg.macd==='any'){ check('MACD', true, true); }
+  else if(cfg.macd==='crossover'){ check('MACD', macdCrossingUp||macdCrossingDown); }
+  else { check('MACD', macdMatch); }
+
+  if(cfg.bb==='any'){ check('Bollinger', true, true); }
+  else if(cfg.bb==='breakout'){ check('Bollinger', (direction==='bullish'&&bbBreakBull)||(direction==='bearish'&&bbBreakBear)); }
+  else if(cfg.bb==='fade'){ check('Bollinger', (direction==='bullish'&&bbFadeBull)||(direction==='bearish'&&bbFadeBear)); }
+  else { check('Bollinger', !bbMidRange); }
+
+  if(cfg.sr==='any'){ check('S&R level', true, true); }
+  else { check('S&R level', atLevel); }
+
+  if(cfg.vol==='any'){ check('Volume / price action', true, true); }
+  else if(cfg.vol==='spike'){ check('Volume / price action', volSpike); }
+  else if(cfg.vol==='low_retrace'){ check('Volume / price action', lowVolRetrace); }
+  else if(cfg.vol==='compression'){ check('Volume / price action', compressionActive); }
+  else { check('Volume / price action', volAboveAvg); }
+
+  let doubleTouchPass;
+  if(cfg.doubleTouch==='any'){ check('Double touch S&R', true, true); }
+  else if(cfg.doubleTouch==='either'){ check('Double touch S&R', doubleTop || doubleBottom); }
+  else {
+    doubleTouchPass = (direction==='bullish' && doubleBottom) || (direction==='bearish' && doubleTop);
+    check('Double touch S&R', doubleTouchPass);
+  }
+
+  const pct = total>0 ? Math.round((score/total)*100) : 0;
+  const threshold = parseInt(document.getElementById('sc_threshold').value);
+  const gatePass = bias.direction!=='unclear' && direction===bias.direction;
+  const alertTriggered = pct >= threshold && direction !== 'unclear' && gatePass;
+
+  return {
+    price, change, direction, symbol, tf,
+    score, total, pct, threshold, alertTriggered, gatePass, dailyDirection: bias.direction,
+    results,
+    rsiVal, hist, div, atLevel, macdCrossingUp, macdCrossingDown,
+    volCurrent, volAvg10, volSpike, volAboveAvg, volLow,
+    retraceState, doubleTop, doubleBottom, topLevel, bottomLevel,
+  };
+}
+
+// ─── Scalp UI ─────────────────────────────────────────────────────────────────
+function updateScCondUI(data){
+  const grid = document.getElementById('scCondGrid');
+  grid.innerHTML='';
+  data.results.forEach((r)=>{
+    const cls = r.status==='pass'?'ci-pass':r.status==='fail'?'ci-fail':r.status==='warn'?'ci-warn':'ci-na';
+    const icon = r.status==='pass'?'✓':r.status==='fail'?'✗':r.status==='warn'?'!':'–';
+    grid.innerHTML+=`<div class="cond-item"><div class="cond-icon ${cls}">${icon}</div>${r.label}</div>`;
+  });
+  const barColor = (data.pct>=data.threshold && data.gatePass)?'var(--bull)':data.pct>=50?'var(--warn)':'var(--bear)';
+  document.getElementById('scLiveBar').style.width=data.pct+'%';
+  document.getElementById('scLiveBar').style.background=barColor;
+  document.getElementById('scLivePct').style.color=barColor;
+  document.getElementById('scLivePct').textContent=data.pct+'%';
+}
+
+function updateScStatusBar(data, error=null){
+  const dot = document.getElementById('scStatusDot');
+  const txt = document.getElementById('scStatusText');
+  const priceEl = document.getElementById('scStatusPrice');
+  const changeEl = document.getElementById('scStatusChange');
+  if(error){
+    dot.className='status-dot error';
+    txt.textContent='Error: '+error;
+    return;
+  }
+  dot.className='status-dot active';
+  const sym = document.getElementById('symbol').value;
+  const gateNote = data.gatePass ? '' : ' · gated (against daily trend)';
+  txt.textContent=`Monitoring ${sym} ${data.tf} · ${data.pct}% confluence${gateNote} · next poll in ${document.getElementById('sc_pollInterval').value}s`;
+  priceEl.textContent=data.price.toFixed(data.price>10?3:5);
+  changeEl.textContent=(data.change>=0?'+':'')+data.change.toFixed(3)+'%';
+  changeEl.style.color=data.change>=0?'var(--bull)':'var(--bear)';
+}
+
+// ─── Scalp poll / start / stop ─────────────────────────────────────────────────
+let scPollTimer = null;
+let scLastAlertTime = 0;
+let scIsRunning = false;
+
+async function scalpPoll(){
+  try{
+    const data = await runScalpAnalysis();
+    updateScCondUI(data);
+    updateScStatusBar(data);
+    const paNote = data.retraceState==='pullback' ? ' · pullback' : data.retraceState==='compression' ? ' · compressing' : '';
+    const dtNote = (data.doubleTop || data.doubleBottom) ? ` · re-test:${data.doubleTop?'top':''}${data.doubleBottom?'bottom':''}` : '';
+    scLog(`${data.symbol} ${data.tf} @ ${data.price.toFixed(5)} · confluence ${data.pct}% (${data.score}/${data.total}) · RSI ${data.rsiVal?.toFixed(1)||'—'} · daily ${data.dailyDirection} · ${data.direction}${data.gatePass?'':' (gated)'}${paNote}${dtNote}`);
+
+    if(data.alertTriggered){
+      const now = Date.now();
+      const cooldown = parseInt(document.getElementById('sc_cooldown').value)*1000;
+      if(now - scLastAlertTime > cooldown){
+        scLastAlertTime = now;
+        const cls = data.direction==='bullish'?'alert-bull':'alert-bear';
+        scLog(`🔔 SCALP ALERT — ${data.pct}% confluence (${data.direction.toUpperCase()}) — daily-aligned — email sent`, cls);
+
+        playAlertSound();
+        sendBrowserNotification(
+          `⚡ Tradable Scalp — ${data.symbol} ${data.direction.toUpperCase()}`,
+          `${data.pct}% confluence · ${data.tf} · Price: ${data.price.toFixed(5)} · RSI: ${data.rsiVal?.toFixed(1)||'—'}`,
+          data.direction === 'bullish'
+        );
+
+        const subject = `Tradable SCALP Alert — ${data.symbol} ${data.direction.toUpperCase()} ${data.pct}% (${data.tf})`;
+        const body =
+          `TRADABLE SCALP ALERT\n`+
+          `${'─'.repeat(30)}\n`+
+          `Pair: ${data.symbol}\n`+
+          `Timeframe: ${data.tf}\n`+
+          `Price: ${data.price.toFixed(5)}\n`+
+          `Direction: ${data.direction.toUpperCase()}\n`+
+          `Daily trend: ${data.dailyDirection.toUpperCase()} (aligned)\n`+
+          `Confluence: ${data.pct}% (${data.score}/${data.total} conditions met)\n`+
+          `${'─'.repeat(30)}\n`+
+          `RSI(9): ${data.rsiVal?.toFixed(1)||'—'}\n`+
+          `Divergence: ${data.div}\n`+
+          `Tick volume: ${data.volSpike?'SPIKE ('+Math.round(data.volCurrent/data.volAvg10*100)+'% of avg)':data.volAboveAvg?'Above average':'Below average'}\n`+
+          (data.macdCrossingUp?`MACD: Crossing UP ✓\n`:'')+(data.macdCrossingDown?`MACD: Crossing DOWN ✓\n`:'')+
+          (data.atLevel?`S&R: Price at key level ✓\n`:'')+
+          (data.retraceState==='pullback'?`Price action: genuine pullback\n`:'')+
+          (data.retraceState==='compression'?`Price action: range compressing (coiling)\n`:'')+
+          (data.doubleTop?`Double touch: resistance re-test (~${data.topLevel?.toFixed(5)})\n`:'')+
+          (data.doubleBottom?`Double touch: support re-test (~${data.bottomLevel?.toFixed(5)})\n`:'')+
+          `${'─'.repeat(30)}\n`+
+          `Open Tradable for full confluence analysis.`;
+
+        await sendEmail(subject, body);
+      } else {
+        scLog(`Alert suppressed — cooldown active (${Math.round((cooldown-(Date.now()-scLastAlertTime))/60000)}m remaining)`);
+      }
+    } else if(data.pct >= data.threshold && data.direction !== 'unclear' && !data.gatePass){
+      scLog(`Confluence met (${data.pct}%) but gated — scalp direction (${data.direction}) conflicts with daily trend (${data.dailyDirection})`, 'alert-warn');
+    }
+  }catch(e){
+    updateScStatusBar(null, e.message);
+    scLog('Poll error: '+e.message, 'log-err');
+  }
+}
+
+async function startScalpMonitor(){
+  if(scIsRunning) return;
+  const key = document.getElementById('tdKey').value.trim();
+  if(!key){ scLog('TwelveData API key required', 'log-err'); return; }
+  scIsRunning=true;
+  document.getElementById('scBtnStart').disabled=true;
+  document.getElementById('scBtnStop').disabled=false;
+  document.getElementById('scStatusDot').className='status-dot active';
+  document.getElementById('scStatusText').textContent='Starting...';
+  document.getElementById('modeDotScalp').classList.add('on');
+  scLog('Scalp monitor started · fetching initial data...');
+  await requestNotificationPermission();
+  await scalpPoll();
+  const interval = parseInt(document.getElementById('sc_pollInterval').value)*1000;
+  scPollTimer = setInterval(scalpPoll, interval);
+}
+
+function stopScalpMonitor(){
+  if(scPollTimer){ clearInterval(scPollTimer); scPollTimer=null; }
+  scIsRunning=false;
+  document.getElementById('scBtnStart').disabled=false;
+  document.getElementById('scBtnStop').disabled=true;
+  document.getElementById('scStatusDot').className='status-dot';
+  document.getElementById('scStatusText').textContent='Stopped';
+  document.getElementById('scStatusPrice').textContent='';
+  document.getElementById('scStatusChange').textContent='';
+  document.getElementById('modeDotScalp').classList.remove('on');
+  scLog('Scalp monitor stopped');
 }
 </script>
 </body>
