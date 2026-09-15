@@ -667,7 +667,9 @@ h1{font-size:26px;font-weight:600;color:var(--text);margin-bottom:0.25rem}
         <option value="NZD/USD">NZD/USD</option>
         <option value="EUR/GBP">EUR/GBP</option>
         <option value="GBP/JPY">GBP/JPY</option>
+        <option value="AUD/JPY">AUD/JPY</option>
       </select>
+      <input type="text" id="scoutSymbolManual" placeholder="Or type any pair, e.g. EUR/CHF" style="margin-top:6px" autocomplete="off">
     </div>
     <div class="field">
       <label>Entry timeframe</label>
@@ -1390,7 +1392,8 @@ async function runScoutCheck(){
   statusEl.textContent = 'Checking…';
   statusEl.style.color = 'var(--text2)';
   try{
-    const symbol = document.getElementById('scoutSymbol').value;
+    const manual = document.getElementById('scoutSymbolManual').value.trim().toUpperCase();
+    const symbol = manual || document.getElementById('scoutSymbol').value;
     const tf = document.getElementById('scoutTimeframe').value;
     const interval = intervalMap[tf];
 
