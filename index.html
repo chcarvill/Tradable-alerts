@@ -120,6 +120,17 @@ h1{font-size:26px;font-weight:600;color:var(--text);margin-bottom:0.25rem}
 .help-reminder{font-size:12px;color:var(--text3);line-height:1.65;padding:0.75rem 1rem;background:var(--bg3);border-radius:var(--radius);border:0.5px solid var(--border);margin-top:0.75rem}
 .help-reminder strong{color:var(--text2)}
 
+/* scout verdict banner */
+.scout-verdict{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-radius:var(--radius-lg);margin-bottom:1rem;border:0.5px solid var(--border)}
+.scout-verdict .sv-label{font-size:20px;font-weight:700;letter-spacing:0.03em}
+.scout-verdict .sv-pair{font-size:12px;color:var(--text2)}
+.scout-verdict.sv-buy{background:var(--bull-bg);border-color:var(--bull-border)}
+.scout-verdict.sv-buy .sv-label{color:var(--bull)}
+.scout-verdict.sv-sell{background:var(--bear-bg);border-color:var(--bear-border)}
+.scout-verdict.sv-sell .sv-label{color:var(--bear)}
+.scout-verdict.sv-wait{background:var(--warn-bg);border-color:var(--warn-border)}
+.scout-verdict.sv-wait .sv-label{color:var(--warn)}
+
 @media(max-width:600px){.grid2,.grid3,.cond-grid{grid-template-columns:1fr}.btn-row{flex-direction:column}}
 </style>
 </head>
@@ -135,6 +146,7 @@ h1{font-size:26px;font-weight:600;color:var(--text);margin-bottom:0.25rem}
 <div class="mode-tabs">
 <button class="mode-tab active" id="modeBtnSwing" onclick="showMode('swing')"><span class="mt-dot" id="modeDotSwing"></span>Swing / Entry Alerts</button>
 <button class="mode-tab" id="modeBtnScalp" onclick="showMode('scalp')"><span class="mt-dot" id="modeDotScalp"></span>Scalping</button>
+<button class="mode-tab" id="modeBtnScout" onclick="showMode('scout')">Scout for Entries</button>
 </div>
 
 <!-- STEP 1: API KEYS -->
@@ -633,6 +645,85 @@ h1{font-size:26px;font-weight:600;color:var(--text);margin-bottom:0.25rem}
 
 </div><!-- /tabScalp -->
 
+<div class="tab-panel" id="tabScout">
+
+<div class="section">
+  <div class="section-title">Scout for Entries</div>
+  <p style="font-size:12px;color:var(--text2);margin-bottom:0.875rem">
+    Ask on demand whether a specific pair currently meets your entry stipulations — no monitor, no polling, just a one-off check.
+    It uses the <strong>same ruleset as Step 2 above</strong> (edit those conditions to change what counts as a good entry), plus a
+    higher-timeframe trend-alignment bonus added to the confluence score.
+  </p>
+
+  <div class="grid2">
+    <div class="field">
+      <label>Pair to check</label>
+      <select id="scoutSymbol">
+        <option value="EUR/USD">EUR/USD</option>
+        <option value="GBP/USD">GBP/USD</option>
+        <option value="AUD/USD">AUD/USD</option>
+        <option value="USD/JPY">USD/JPY</option>
+        <option value="USD/CAD">USD/CAD</option>
+        <option value="NZD/USD">NZD/USD</option>
+        <option value="EUR/GBP">EUR/GBP</option>
+        <option value="GBP/JPY">GBP/JPY</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Entry timeframe</label>
+      <select id="scoutTimeframe">
+        <option value="1day" selected>Daily (1D)</option>
+        <option value="4h">4-hour</option>
+        <option value="1h">1-hour</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-start" id="scoutBtn" onclick="runScoutCheck()">🔍 Check entry</button>
+  </div>
+  <div style="font-size:12px;margin-top:0.5rem;min-height:16px" id="scoutStatus"></div>
+
+  <div class="note" style="margin-top:0.75rem">
+    Higher-timeframe check: 1-hour entries check against 4-hour and Daily; 4-hour entries check against Daily and Weekly;
+    Daily entries check against Weekly. Each agreeing higher timeframe adds <strong>+7%</strong> to the confluence score —
+    it never blocks a signal on its own, it just makes an already-qualifying setup score higher when the bigger trend agrees.
+  </div>
+</div>
+
+<div class="section" id="scoutResult" style="display:none">
+  <div class="scout-verdict" id="scoutVerdict"><span class="sv-label">—</span><span class="sv-pair"></span></div>
+
+  <div style="display:flex;align-items:center;gap:10px">
+    <span style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em">Confluence</span>
+    <div style="flex:1;background:var(--bg3);border-radius:4px;height:6px;overflow:hidden">
+      <div id="scoutBar" style="height:6px;border-radius:4px;width:0%;background:var(--info);transition:width 0.4s"></div>
+    </div>
+    <span id="scoutPct" style="font-size:13px;font-weight:600;color:var(--info);min-width:36px;text-align:right">—</span>
+  </div>
+  <div style="font-size:11px;color:var(--text3);margin-top:4px" id="scoutBreakdownText"></div>
+
+  <div style="margin-top:1rem;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em">Entry-timeframe conditions</div>
+  <div class="cond-grid" id="scoutCondGrid"></div>
+
+  <div style="margin-top:1rem;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em">Higher-timeframe alignment</div>
+  <div class="cond-grid" id="scoutMtfRows"></div>
+</div>
+
+<div class="note" style="margin-bottom:1rem">
+  <strong>How it works:</strong> pick a pair and an entry timeframe, hit "Check entry," and it runs your existing Step 2 ruleset against that pair right then — no monitor, no polling. Then it pulls the higher timeframe(s) relative to your entry TF (1H checks against 4H+Daily, 4H checks against Daily+Weekly, Daily checks against Weekly), reads their trend direction, and adds +7% to the confluence score for each one that agrees with your entry-timeframe direction — as a bonus, never a gate, matching what you decided. You get a BUY/SELL/NOT YET verdict banner, the full condition breakdown, and the timeframe-alignment rows all in one screen.<br><br>
+  It deliberately doesn't touch your live Swing/Scalp monitor's fields — it's a fully separate check, so running it while a monitor's active is safe.
+</div>
+
+<div class="note" style="margin-bottom:2rem">
+  <strong>Scope:</strong> this checks everything from Step 2 that's computable from price data (MA trend, RSI, MACD, Bollinger,
+  S&amp;R, volume, confluence) plus multi-timeframe trend alignment. It does <strong>not</strong> check things that need a
+  separate data source or your own judgement yet — scheduled economic events, ATR-based stop sizing, price-action/order-flow
+  reads, or the "MM two accounts" condition. Those are still on the drawing board.
+</div>
+
+</div><!-- /tabScout -->
+
 </div><!-- /container -->
 
 <script>
@@ -908,15 +999,24 @@ function detectDivergence(closes, rsi, lookback=5){
 }
 
 // ─── Main analysis ────────────────────────────────────────────────────────────
+// intervalMap shared across monitor + Scout tab
+const intervalMap = {'1day':'1day','4h':'4h','1h':'1h'};
+
 async function runAnalysis(){
   const symbol = document.getElementById('symbol').value;
   const tf = document.getElementById('timeframe').value;
+  return analyzeSignal(symbol, intervalMap[tf]);
+}
+
+// Parameterized core analysis — takes symbol + TwelveData interval directly
+// so it can be run against any pair/timeframe (used by the monitor via
+// runAnalysis() above, and on-demand by the Scout tab) without touching the
+// shared Step 1 symbol/timeframe fields. Reads the Step 2 condition ruleset
+// from the DOM either way, since that's the single shared stipulation set.
+async function analyzeSignal(symbol, interval){
   const key = document.getElementById('tdKey').value.trim();
   if(!key) throw new Error('TwelveData API key required');
 
-  // Map timeframe to interval string and fetch enough candles
-  const intervalMap = {'1day':'1day','4h':'4h','1h':'1h'};
-  const interval = intervalMap[tf];
   const candles = await fetchCandles(symbol, interval, 250);
   const closes = candles.map(c=>c.close);
   const volumes = candles.map(c=>c.volume);
@@ -1218,8 +1318,10 @@ function stopMonitor(){
 function showMode(which){
   document.getElementById('tabSwing').classList.toggle('active', which==='swing');
   document.getElementById('tabScalp').classList.toggle('active', which==='scalp');
+  document.getElementById('tabScout').classList.toggle('active', which==='scout');
   document.getElementById('modeBtnSwing').classList.toggle('active', which==='swing');
   document.getElementById('modeBtnScalp').classList.toggle('active', which==='scalp');
+  document.getElementById('modeBtnScout').classList.toggle('active', which==='scout');
 }
 
 // ─── Scalp logging ────────────────────────────────────────────────────────────
@@ -1251,6 +1353,110 @@ async function getDailyBias(symbol){
   const direction = trendBull ? 'bullish' : trendBear ? 'bearish' : 'unclear';
   dailyBiasCache = {direction, timestamp: Date.now(), symbol, price};
   return dailyBiasCache;
+}
+
+// ─── Scout for Entries: multi-timeframe confluence + on-demand check ──────────
+// Which higher timeframes to check for trend alignment, per entry timeframe.
+function higherTimeframesFor(interval){
+  if(interval==='1h') return ['4h','1day'];
+  if(interval==='4h') return ['1day','1week'];
+  return ['1week']; // entry on 1day → only weekly is "higher"
+}
+
+const TF_LABEL = {'1h':'1-hour','4h':'4-hour','1day':'Daily','1week':'Weekly'};
+
+// Lightweight trend read on any timeframe (price vs 50/200 MA) — same logic
+// as the scalp tab's daily-bias gate, generalized to any interval and
+// without the monitor's caching (Scout runs on demand, not on a poll loop).
+async function getTrendForTF(symbol, interval){
+  const candles = await fetchCandles(symbol, interval, 250);
+  const closes = candles.map(c=>c.close);
+  const n = closes.length;
+  const price = closes[n-1];
+  const ma50 = sma(closes,50)[n-1];
+  const ma200 = sma(closes,200)[n-1];
+  const trendBull = price > ma50 && price > ma200;
+  const trendBear = price < ma50 && price < ma200;
+  return trendBull ? 'bullish' : trendBear ? 'bearish' : 'unclear';
+}
+
+const SCOUT_BONUS_PER_TF = 7; // percentage points added to confluence per agreeing higher timeframe
+
+async function runScoutCheck(){
+  const btn = document.getElementById('scoutBtn');
+  const statusEl = document.getElementById('scoutStatus');
+  btn.disabled = true;
+  statusEl.textContent = 'Checking…';
+  statusEl.style.color = 'var(--text2)';
+  try{
+    const symbol = document.getElementById('scoutSymbol').value;
+    const tf = document.getElementById('scoutTimeframe').value;
+    const interval = intervalMap[tf];
+
+    const base = await analyzeSignal(symbol, interval);
+
+    // Multi-timeframe confluence — scored as a bonus, never a gate
+    const higherTFs = higherTimeframesFor(interval);
+    const mtfResults = [];
+    let bonus = 0;
+    for(const htf of higherTFs){
+      const dir = await getTrendForTF(symbol, htf);
+      const agrees = base.direction!=='unclear' && dir===base.direction;
+      if(agrees) bonus += SCOUT_BONUS_PER_TF;
+      mtfResults.push({label: TF_LABEL[htf], direction: dir, agrees});
+    }
+
+    const finalPct = Math.min(100, base.pct + bonus);
+    const verdict = base.direction==='unclear' ? 'NO SIGNAL'
+      : finalPct < base.threshold ? 'NOT YET'
+      : base.direction==='bullish' ? 'BUY' : 'SELL';
+
+    renderScoutResult({...base, finalPct, bonus, mtfResults, verdict, entryTfLabel: TF_LABEL[interval]});
+    statusEl.textContent = '';
+  } catch(err){
+    statusEl.textContent = 'Error: '+err.message;
+    statusEl.style.color = 'var(--bear)';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function renderScoutResult(r){
+  document.getElementById('scoutResult').style.display = 'block';
+
+  // Verdict banner
+  const banner = document.getElementById('scoutVerdict');
+  banner.className = 'scout-verdict ' + (r.verdict==='BUY' ? 'sv-buy' : r.verdict==='SELL' ? 'sv-sell' : 'sv-wait');
+  banner.innerHTML = `<span class="sv-label">${r.verdict}</span><span class="sv-pair">${r.symbol} · ${r.entryTfLabel}</span>`;
+
+  // Confluence bar (base vs bonus shown separately)
+  const barColor = r.verdict==='BUY' ? 'var(--bull)' : r.verdict==='SELL' ? 'var(--bear)' : 'var(--warn)';
+  document.getElementById('scoutBar').style.width = r.finalPct+'%';
+  document.getElementById('scoutBar').style.background = barColor;
+  document.getElementById('scoutPct').style.color = barColor;
+  document.getElementById('scoutPct').textContent = r.finalPct+'%';
+  document.getElementById('scoutBreakdownText').textContent =
+    r.bonus>0 ? `${r.pct}% from entry-timeframe conditions + ${r.bonus}% higher-timeframe confluence bonus`
+              : `${r.pct}% from entry-timeframe conditions (no higher-timeframe bonus)`;
+
+  // Condition breakdown grid (same conditions as the swing monitor, since it's the same ruleset)
+  const grid = document.getElementById('scoutCondGrid');
+  grid.innerHTML = '';
+  r.results.forEach(res=>{
+    const cls = res.status==='pass'?'ci-pass':res.status==='fail'?'ci-fail':'ci-na';
+    const icon = res.status==='pass'?'✓':res.status==='fail'?'✗':'–';
+    grid.innerHTML += `<div class="cond-item"><div class="cond-icon ${cls}">${icon}</div>${res.label}</div>`;
+  });
+
+  // Multi-timeframe alignment rows
+  const mtfWrap = document.getElementById('scoutMtfRows');
+  mtfWrap.innerHTML = '';
+  r.mtfResults.forEach(m=>{
+    const dirLabel = m.direction==='bullish' ? 'Bullish' : m.direction==='bearish' ? 'Bearish' : 'Unclear';
+    const cls = m.agrees ? 'ci-pass' : (m.direction==='unclear' ? 'ci-na' : 'ci-warn');
+    const icon = m.agrees ? '✓' : (m.direction==='unclear' ? '–' : '✗');
+    mtfWrap.innerHTML += `<div class="cond-item"><div class="cond-icon ${cls}">${icon}</div>${m.label} trend: ${dirLabel}${m.agrees?' (agrees)':''}</div>`;
+  });
 }
 
 function updateGateRow(){
