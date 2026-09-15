@@ -702,6 +702,7 @@ h1{font-size:26px;font-weight:600;color:var(--text);margin-bottom:0.25rem}
     <span id="scoutPct" style="font-size:13px;font-weight:600;color:var(--info);min-width:36px;text-align:right">—</span>
   </div>
   <div style="font-size:11px;color:var(--text3);margin-top:4px" id="scoutBreakdownText"></div>
+  <div style="font-size:12px;color:var(--warn);margin-top:8px" id="scoutMissingText"></div>
 
   <div style="margin-top:1rem;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em">Entry-timeframe conditions</div>
   <div class="cond-grid" id="scoutCondGrid"></div>
@@ -1438,6 +1439,14 @@ function renderScoutResult(r){
   document.getElementById('scoutBreakdownText').textContent =
     r.bonus>0 ? `${r.pct}% from entry-timeframe conditions + ${r.bonus}% higher-timeframe confluence bonus`
               : `${r.pct}% from entry-timeframe conditions (no higher-timeframe bonus)`;
+
+  // Plain-language list of exactly what's missing when it's not a clean 100%
+  const missedConds = r.results.filter(res=>res.status==='fail').map(res=>res.label);
+  const missedTFs = r.mtfResults.filter(m=>!m.agrees && m.direction!=='unclear').map(m=>`${m.label} trend disagrees`);
+  const missing = [...missedConds, ...missedTFs];
+  document.getElementById('scoutMissingText').textContent = missing.length
+    ? `Not met: ${missing.join(', ')}`
+    : (r.finalPct>=100 ? '' : '');
 
   // Condition breakdown grid (same conditions as the swing monitor, since it's the same ruleset)
   const grid = document.getElementById('scoutCondGrid');
