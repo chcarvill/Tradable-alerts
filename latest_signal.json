@@ -1,0 +1,19 @@
+{
+  "generated_at_utc": "2026-09-26T10:13:59.991632+00:00",
+  "us_10y_nominal_yield": null,
+  "us_core_cpi_yoy_pct": null,
+  "us_real_yield": null,
+  "au_10y_nominal_yield": null,
+  "au_cpi_yoy_pct": null,
+  "au_real_yield": null,
+  "real_yield_spread_au_minus_us": null,
+  "spread_rolling_mean": null,
+  "spread_rolling_std": null,
+  "spread_z_score": null,
+  "vix_close": 14.87,
+  "signal": "Neutral",
+  "warnings": [
+    "Missing required macro series: AU nominal yield, AU CPI",
+    "Aligned macro frame is empty; no signal computed."
+  ]
+}
