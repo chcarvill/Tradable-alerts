@@ -120,6 +120,31 @@ h1{font-size:26px;font-weight:600;color:var(--text);margin-bottom:0.25rem}
 .help-reminder{font-size:12px;color:var(--text3);line-height:1.65;padding:0.75rem 1rem;background:var(--bg3);border-radius:var(--radius);border:0.5px solid var(--border);margin-top:0.75rem}
 .help-reminder strong{color:var(--text2)}
 
+/* master tabs: Interday / Intraday */
+.master-tabs{display:flex;gap:24px;margin-bottom:1.75rem;border-bottom:0.5px solid var(--border)}
+.master-tab{font-size:14px;font-weight:600;color:var(--text2);padding:0 0 12px;background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.15s}
+.master-tab:hover{color:var(--text)}
+.master-tab.active{color:var(--info);border-bottom-color:var(--info)}
+.master-panel{display:none}
+.master-panel.active{display:block}
+
+/* macro (Interday) panel */
+.macro-hero{padding:0.25rem 0 1.25rem}
+.macro-signal{font-size:2.25rem;font-weight:600;line-height:1}
+.macro-signal.bullish{color:var(--bull)}
+.macro-signal.bearish{color:var(--bear)}
+.macro-signal.neutral{color:var(--neu)}
+.macro-sub{font-size:12px;color:var(--text2);margin-top:0.5rem}
+.macro-sub strong{color:var(--text);font-weight:600}
+.macro-row{display:flex;justify-content:space-between;gap:1rem;padding:0.6rem 0;border-bottom:0.5px solid var(--border);font-size:13px}
+.macro-row:last-child{border-bottom:none}
+.macro-row .ml{color:var(--text2)}
+.macro-row .mv{font-weight:600;color:var(--text);font-variant-numeric:tabular-nums;white-space:nowrap}
+.macro-row .mv.dash{color:var(--text3);font-weight:400}
+.macro-group{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em;margin:1rem 0 0.25rem}
+.macro-group:first-child{margin-top:0}
+.macro-state{font-size:13px;color:var(--text2);padding:0.5rem 0}
+
 /* scout verdict banner */
 .scout-verdict{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-radius:var(--radius-lg);margin-bottom:1rem;border:0.5px solid var(--border)}
 .scout-verdict .sv-label{font-size:20px;font-weight:700;letter-spacing:0.03em}
@@ -136,6 +161,32 @@ h1{font-size:26px;font-weight:600;color:var(--text);margin-bottom:0.25rem}
 </head>
 <body>
 <div class="container">
+
+<div class="master-tabs">
+<button class="master-tab active" data-tab="interday" onclick="switchMasterTab('interday')">Interday</button>
+<button class="master-tab" data-tab="intraday" onclick="switchMasterTab('intraday')">Intraday</button>
+</div>
+
+<div class="master-panel active" id="panel-interday">
+
+<header>
+  <div class="logo">Trading framework</div>
+  <h1>Tradable — Macro Signal</h1>
+  <div class="subtitle">Longer-term fundamentals · real yield differential, AUD/USD</div>
+</header>
+
+<div class="section">
+  <div class="section-title">Macro fundamentals</div>
+  <div id="macroContent">
+    <div class="macro-state">Loading latest_signal.json…</div>
+  </div>
+</div>
+
+<div class="note" id="macroFooter" style="margin-bottom:2rem"></div>
+
+</div><!-- /panel-interday -->
+
+<div class="master-panel" id="panel-intraday">
 
 <header>
   <div class="logo">Trading framework</div>
@@ -727,9 +778,91 @@ h1{font-size:26px;font-weight:600;color:var(--text);margin-bottom:0.25rem}
 
 </div><!-- /tabScout -->
 
+</div><!-- /panel-intraday -->
+
 </div><!-- /container -->
 
 <script>
+// ─── Master tabs: Interday / Intraday ─────────────────────────────────────────
+const MASTER_TAB_STORAGE_KEY = 'tradableMasterTab';
+
+function switchMasterTab(name){
+  document.querySelectorAll('.master-tab').forEach(b=>b.classList.toggle('active', b.dataset.tab===name));
+  document.getElementById('panel-interday').classList.toggle('active', name==='interday');
+  document.getElementById('panel-intraday').classList.toggle('active', name==='intraday');
+  try{ localStorage.setItem(MASTER_TAB_STORAGE_KEY, name); }catch(e){}
+}
+
+(function initMasterTab(){
+  let saved = null;
+  try{ saved = localStorage.getItem(MASTER_TAB_STORAGE_KEY); }catch(e){}
+  if(saved === 'intraday') switchMasterTab('intraday');
+})();
+
+// ─── Macro signal (Interday tab) ──────────────────────────────────────────────
+function fmtPct(v){
+  if(v===null||v===undefined) return null;
+  return (v>=0?'+':'')+v.toFixed(2)+'%';
+}
+
+function macroRow(label, value){
+  const has = value!==null && value!==undefined;
+  return `<div class="macro-row"><span class="ml">${label}</span><span class="mv${has?'':' dash'}">${has?value:'—'}</span></div>`;
+}
+
+function renderMacroSignal(data){
+  const cls = (data.signal || 'Neutral').toLowerCase();
+  const z = data.spread_z_score;
+
+  let html = '';
+  html += `<div class="macro-hero">`;
+  html += `<div class="macro-signal ${cls}">${data.signal || 'Neutral'}</div>`;
+  html += `<div class="macro-sub">Real yield spread Z-score: <strong>${z===null||z===undefined?'n/a':z.toFixed(2)}</strong></div>`;
+  html += `</div>`;
+
+  html += `<div class="macro-group">Real yield spread</div>`;
+  html += macroRow('AU real yield − US real yield', fmtPct(data.real_yield_spread_au_minus_us));
+  html += macroRow('3-year rolling mean', fmtPct(data.spread_rolling_mean));
+  html += macroRow('3-year rolling std. dev.', (data.spread_rolling_std===null||data.spread_rolling_std===undefined)?null:data.spread_rolling_std.toFixed(3));
+
+  html += `<div class="macro-group">United States</div>`;
+  html += macroRow('10-year nominal yield', fmtPct(data.us_10y_nominal_yield));
+  html += macroRow('Core CPI, YoY', fmtPct(data.us_core_cpi_yoy_pct));
+  html += macroRow('Real yield', fmtPct(data.us_real_yield));
+
+  html += `<div class="macro-group">Australia</div>`;
+  html += macroRow('10-year nominal yield', fmtPct(data.au_10y_nominal_yield));
+  html += macroRow('CPI, YoY', fmtPct(data.au_cpi_yoy_pct));
+  html += macroRow('Real yield', fmtPct(data.au_real_yield));
+
+  html += `<div class="macro-group">Risk context</div>`;
+  html += macroRow('VIX close', (data.vix_close===null||data.vix_close===undefined)?null:data.vix_close.toFixed(2));
+
+  document.getElementById('macroContent').innerHTML = html;
+
+  const footer = document.getElementById('macroFooter');
+  let fhtml = `<strong>Generated</strong> ${data.generated_at_utc ? new Date(data.generated_at_utc).toUTCString() : 'unknown'}`;
+  if(data.warnings && data.warnings.length){
+    fhtml += `<br><br><strong style="color:var(--warn)">Pipeline warnings:</strong><br>` + data.warnings.map(w=>'• '+w).join('<br>');
+  }
+  footer.innerHTML = fhtml;
+}
+
+async function loadMacroSignal(){
+  try{
+    const res = await fetch('./latest_signal.json', { cache: 'no-store' });
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data = await res.json();
+    renderMacroSignal(data);
+  }catch(e){
+    document.getElementById('macroContent').innerHTML =
+      `<div class="macro-state">Could not load latest_signal.json (${e.message}). Make sure the daily macro workflow has run at least once and the file sits in this repo.</div>`;
+    document.getElementById('macroFooter').innerHTML = '';
+  }
+}
+
+loadMacroSignal();
+
 // ─── State ────────────────────────────────────────────────────────────────────
 let pollTimer = null;
 let lastAlertTime = 0;
