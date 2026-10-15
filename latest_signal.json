@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-10-14T03:33:40.372954+00:00",
+  "generated_at_utc": "2026-10-15T03:13:22.750662+00:00",
   "us_10y_nominal_yield": null,
   "us_core_cpi_yoy_pct": null,
   "us_real_yield": null,
@@ -10,7 +10,7 @@
   "spread_rolling_mean": null,
   "spread_rolling_std": null,
   "spread_z_score": null,
-  "vix_close": 15.27,
+  "vix_close": 16.870001,
   "signal": "Neutral",
   "warnings": [
     "Missing required macro series: AU nominal yield, AU CPI",
